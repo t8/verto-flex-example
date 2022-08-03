@@ -108,6 +108,6 @@ export async function handle(
   }
 
   if (input.function === "addPair") {
-    return { state: await Verto.AddPair(state, action) };
+    return { state: await AddPair(state, action) };
   }
 }
