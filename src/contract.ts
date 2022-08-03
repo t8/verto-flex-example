@@ -1,4 +1,4 @@
-import { AddPair } from "@verto/component";
+import { AddPair, CancelOrder, CreateOrder, Halt } from "@verto/component";
 import {
   StateInterface,
   ActionInterface,
@@ -110,5 +110,17 @@ export async function handle(
 
   if (input.function === "addPair") {
     return { state: await AddPair(state, action) };
+  }
+
+  if (input.function === "cancelOrder") {
+    return { state: await CancelOrder(state, action) };
+  }
+
+  if (input.function === "createOrder") {
+    return { state: await CreateOrder(state, action) };
+  }
+
+  if (input.function === "halt") {
+    return { state: await Halt(state, action) };
   }
 }
