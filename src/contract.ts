@@ -72,9 +72,10 @@ export async function handle(
 
     for (const entry of calls) {
       // Run invocation
-      res = (await handle(res, { caller: input.contract, input: entry.input }))
-      // @ts-expect-error
-        .state;
+      res =
+        // @ts-expect-error
+        (await handle(res, { caller: input.contract, input: entry.input }))
+          .state;
       // Push invocation to executed invocations
       res.invocations.push(entry.txID);
     }
