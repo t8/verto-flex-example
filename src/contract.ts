@@ -1,4 +1,4 @@
-import Verto from "@verto/component";
+import { AddPair } from "@verto/component";
 import {
   StateInterface,
   ActionInterface,

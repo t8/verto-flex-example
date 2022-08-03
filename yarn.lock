@@ -809,10 +809,10 @@
   dependencies:
     "@types/node" "*"
 
-"@verto/component@^0.0.4":
-  version "0.0.4"
-  resolved "https://registry.yarnpkg.com/@verto/component/-/component-0.0.4.tgz#dc4e3a07354d18dd42955558b08835fbfafb6ec8"
-  integrity sha512-S8MTuloQppAG6DSZvqBe8U/CxY3a6KHMrXJ6vqEhiONcQM+8DNWEy+vDXdtqREgwhWeTBusO2qORsAjyDvLNfw==
+"@verto/component@^0.0.6":
+  version "0.0.6"
+  resolved "https://registry.yarnpkg.com/@verto/component/-/component-0.0.6.tgz#4560f614e42d0dc943bf848488fcbd7f9a2918a2"
+  integrity sha512-hTO+Vfmj9FniRnPoEs+sG8YS8VONj8Oj9g9rk7zbY11yR/WhjY3xGMyno8YyBYe7JGgJHkBFORWjVhsgg1ny1A==
   dependencies:
     arweave "^1.11.4"
     smartweave "^0.4.49"

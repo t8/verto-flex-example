@@ -8,7 +8,7 @@
     "prettier": "^2.2.1"
   },
   "dependencies": {
-    "@verto/component": "^0.0.4",
+    "@verto/component": "^0.0.6",
     "arlocal": "^1.1.16",
     "arweave": "^1.11.4",
     "smartweave": "^0.4.49"
