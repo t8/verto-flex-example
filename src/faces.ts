@@ -9,6 +9,15 @@ export interface StateInterface {
   pairs: Array<any>;
   usedTransfers: Array<any>;
   foreignCalls: Array<any>;
+  claimable: [
+    {
+      from: string;
+      to: string;
+      qty: number;
+      txID: string;
+    }
+  ];
+  claims: string[];
 }
 
 export interface BalanceInterface {
@@ -30,10 +39,13 @@ export interface InputInterface {
     | "addPair"
     | "cancelOrder"
     | "createOrder"
-    | "halt";
+    | "halt"
+    | "allow"
+    | "claim";
   target?: string;
   qty?: number;
   contract?: string;
+  txID?: string;
 }
 
 export interface ForeignCallInterface {

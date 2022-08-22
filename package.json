@@ -1,17 +1,20 @@
 {
   "scripts": {
-    "build": "node build.js",
-    "fmt": "prettier --write ."
+    "build": "rm ./dist/contract.js && rm ./dist/tests.js && node build.js",
+    "fmt": "prettier --write .",
+    "test": "node ./dist/tests.js"
   },
   "devDependencies": {
     "esbuild": "^0.8.31",
     "prettier": "^2.2.1"
   },
   "dependencies": {
-    "@verto/component": "^0.0.7",
+    "@verto/flex": "^0.1.6",
     "arlocal": "^1.1.16",
     "arweave": "^1.11.4",
     "replace-in-file": "^6.3.5",
-    "smartweave": "^0.4.49"
-  }
+    "smartweave": "^0.4.49",
+    "warp-contracts": "^1.1.14"
+  },
+  "type": "module"
 }
