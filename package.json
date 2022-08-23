@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "rm ./dist/contract.js && rm ./dist/tests.js && node build.js",
+    "build": "node build.cjs",
     "fmt": "prettier --write .",
     "test": "node ./dist/tests.js"
   },
@@ -9,12 +9,12 @@
     "prettier": "^2.2.1"
   },
   "dependencies": {
-    "@verto/flex": "^0.1.6",
+    "@verto/flex": "^0.1.7",
     "arlocal": "^1.1.16",
     "arweave": "^1.11.4",
+    "crocks": "^0.12.4",
     "replace-in-file": "^6.3.5",
     "smartweave": "^0.4.49",
     "warp-contracts": "^1.1.14"
-  },
-  "type": "module"
+  }
 }

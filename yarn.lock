@@ -830,10 +830,10 @@
   resolved "https://registry.yarnpkg.com/@ungap/promise-all-settled/-/promise-all-settled-1.1.2.tgz#aa58042711d6e3275dd37dc597e5d31e8c290a44"
   integrity sha512-sL/cEvJWAnClXw0wHk85/2L0G6Sj8UB0Ctc1TEMbKSsmpRosqhwj9gWgFRZSrBr2f9tiXISwNhCPmlfqUqyb9Q==
 
-"@verto/flex@^0.1.6":
-  version "0.1.6"
-  resolved "https://registry.yarnpkg.com/@verto/flex/-/flex-0.1.6.tgz#1a4da3d2ad6f104cd85605ed380a475a4cd94fdb"
-  integrity sha512-1suHmYX622/U2rzapQtbDtSpxqUweIzZPn5IRcydf4Q7cQb7GWq0AFrJ98wgUXftVPdAFwF+QcYqJan0QprVng==
+"@verto/flex@^0.1.7":
+  version "0.1.7"
+  resolved "https://registry.yarnpkg.com/@verto/flex/-/flex-0.1.7.tgz#b51375abfd780ee02c03969e4cbcf2d54f1551ec"
+  integrity sha512-42inRfttrOe1+1soLZFQiUS0FHQVFF5tHokzmUuBS00Yocx+XsBF3NIe+TVEWbRdr0eg4u+pP14jZnLxAg4CIg==
   dependencies:
     arweave "^1.11.4"
     smartweave "^0.4.49"
@@ -1699,6 +1699,11 @@ create-require@^1.1.0:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/create-require/-/create-require-1.1.1.tgz#c1d7e8f1e5f6cfc9ff65f9cd352d37348756c333"
   integrity sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==
+
+crocks@^0.12.4:
+  version "0.12.4"
+  resolved "https://registry.yarnpkg.com/crocks/-/crocks-0.12.4.tgz#b4a4512f64e90c42d31375e1a2902a0f9d4b4916"
+  integrity sha512-paln6xJUrR9e/OWMFsyTi4dLyr+q99C5f7PQbGgSDHtwsfW0sCNZvnpHzvniI2dAE0uoBgeIP1Ukmme8Z0HxxA==
 
 cross-spawn@^7.0.3:
   version "7.0.3"
