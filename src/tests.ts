@@ -168,7 +168,12 @@ async function makeOrder(arweave, walletA, contractA, contractB, allowTx) {
 
   orderTx.addTag("App-Name", "SmartWeaveAction");
   orderTx.addTag("App-Version", "0.3.0");
-  orderTx.addTag("Contract", contractB);
+  if (allowTx === "") {
+    // Order is on itself
+    orderTx.addTag("Contract", contractA);
+  } else {
+    orderTx.addTag("Contract", contractB);
+  }
   orderTx.addTag("Input", JSON.stringify(input));
 
   await arweave.transactions.sign(orderTx, walletA.jwk);
@@ -220,6 +225,10 @@ async function flow() {
   console.log(`CONTRACT A: ${contractA}\nCONTRACT B: ${contractB}`);
   const pairTx = await createPair(arweave, walletA, contractA, contractB);
   console.log(`INITIALIZED PAIR TX: ${pairTx}`);
+
+  const matchTx = await makeOrder(arweave, walletB, contractB, contractA, "");
+  console.log(`MADE MATCH TX: ${matchTx}`);
+
   const allowTx = await allowOrder(arweave, walletA, contractA, contractB);
   console.log(`MADE ALLOW TX: ${allowTx}`);
   const orderTx = await makeOrder(

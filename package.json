@@ -9,12 +9,13 @@
     "prettier": "^2.2.1"
   },
   "dependencies": {
-    "@verto/flex": "^0.1.7",
+    "@verto/flex": "^0.1.12",
     "arlocal": "^1.1.16",
     "arweave": "^1.11.4",
     "crocks": "^0.12.4",
     "replace-in-file": "^6.3.5",
     "smartweave": "^0.4.49",
     "warp-contracts": "^1.1.14"
-  }
+  },
+  "type": "module"
 }
