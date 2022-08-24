@@ -14,7 +14,7 @@ Step 2: NFT Wallet wants to place 100 tokens of his NFT for 0.01 BAR
 
 Step 3: BAR Wallet wants to buy 100 tokens of the NFT for 0.01 BAR
 
-`node demos/buy-nft.js`
+`node demo/buy-nft.js`
 
 ---
 
