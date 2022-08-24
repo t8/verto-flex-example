@@ -5,13 +5,13 @@ const { Async } = require('crocks')
 const { generateWallets, triggerFaucet, deployContracts, mine } = require('./lib')
 
 const { of, fromPromise } = Async
-const arweave = Arweave.init({ host: 'localhost', port: '1984', protocol: 'http' })
-const warp = WarpNodeFactory.forTesting(arweave)
+const arweave = Arweave.init({ host: 'arweave.net', port: 443, protocol: 'https' })
+const warp = WarpNodeFactory.memCached(arweave)
 
 of({ warp, arweave })
   .chain(generateWallets)
-  .chain(triggerFaucet)
-  .chain(mine)
+  //.chain(triggerFaucet)
+  //.chain(mine)
   .chain(deployContracts)
   .fork(
     e => console.log('error', e.message),

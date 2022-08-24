@@ -33,19 +33,19 @@ module.exports = {
         .connect(NFT.jwk)
         .setEvaluationOptions({
           internalWrites: true
-        }).readState() // .then(({ state }) => JSON.stringify(state, null, 2))
+        }).readState().then((r) => JSON.stringify(r, null, 2))
       const nftResult = await warp.contract(NFT.CONTRACT)
         .connect(NFT.jwk)
         .setEvaluationOptions({
           internalWrites: true
-        }).readState() //.then(({ state }) => JSON.stringify(state, null, 2))
+        }).readState().then((r) => JSON.stringify(r, null, 2))
 
       console.log('bar', barResult)
       console.log('nft', nftResult)
       return ctx
     }
   ),
-  createBuyOrder: ({ qty = 10, price = 1 }) => fromPromise(
+  createBuyOrder: ({ qty = 10 }) => fromPromise(
     async function createOrder(ctx) {
       const { warp, BAR, NFT, allowTx } = ctx
 
@@ -54,12 +54,11 @@ module.exports = {
         .setEvaluationOptions({
           internalWrites: true
         })
-        .writeInteraction({
+        .bundleInteraction({
           function: 'createOrder',
           transaction: allowTx,
           pair: [BAR.CONTRACT, NFT.CONTRACT],
-          qty,
-          price
+          qty
         })
 
       return ctx
@@ -70,14 +69,14 @@ module.exports = {
       const { warp, BAR, NFT, allowTx } = ctx
 
       const x = await warp.contract(NFT.CONTRACT)
-        .connect(type === 'nft' ? NFT.jwk : BAR.jwk)
+        .connect(NFT.jwk)
         .setEvaluationOptions({
           internalWrites: true
         })
-        .writeInteraction({
+        .bundleInteraction({
           function: 'createOrder',
-          transaction: allowTx,
-          pair: [BAR.CONTRACT, NFT.CONTRACT],
+          transaction: '',
+          pair: [NFT.CONTRACT, BAR.CONTRACT],
           qty,
           price
         })
@@ -110,13 +109,14 @@ module.exports = {
       const { warp, NFT, BAR } = ctx
       const result = await warp.contract(BAR.CONTRACT)
         .connect(BAR.jwk)
-        .writeInteraction({
+        .bundleInteraction({
           function: 'allow',
           target: NFT.CONTRACT,
           qty
         })
       //console.log(result)
-      return { ...ctx, allowTx: result }
+      // on bundlr result tx is originalTxId
+      return { ...ctx, allowTx: result.originalTxId }
     }
   ),
   createPair: fromPromise(
@@ -124,7 +124,7 @@ module.exports = {
       const { warp, NFT, BAR } = ctx
       await warp.contract(NFT.CONTRACT)
         .connect(NFT.jwk)
-        .writeInteraction({
+        .bundleInteraction({
           function: 'addPair',
           pair: BAR.CONTRACT
         })
@@ -141,7 +141,7 @@ module.exports = {
         await readFile('./dist/contract.js')
       )
 
-      const getState = (addr, ticker) => JSON.stringify({
+      const getBarState = (addr, ticker) => JSON.stringify({
         emergencyHaltWallet: addr,
         ticker,
         halted: false,
@@ -149,8 +149,22 @@ module.exports = {
         invocations: [],
         foreignCalls: [],
         balances: {
-          [BAR.address]: 100,
-          [NFT.address]: 100,
+          [addr]: 100000000000000
+        },
+        claims: [],
+        claimable: [],
+        settings: [["isTradeable", true]],
+      })
+
+      const getNftState = (addr, ticker) => JSON.stringify({
+        emergencyHaltWallet: addr,
+        ticker,
+        halted: false,
+        pairs: [],
+        invocations: [],
+        foreignCalls: [],
+        balances: {
+          [addr]: 10000
         },
         claims: [],
         claimable: [],
@@ -160,15 +174,15 @@ module.exports = {
       const barResult = await warp.createContract.deploy({
         src,
         wallet: BAR.jwk,
-        initState: getState(BAR.address, 'BAR')
-      })
+        initState: getBarState(BAR.address, 'TEST-BAR')
+      }, true)
       BAR.CONTRACT = barResult.contractTxId
 
       const nftResult = await warp.createContract.deploy({
         src,
         wallet: NFT.jwk,
-        initState: getState(NFT.address, 'NFT')
-      })
+        initState: getNftState(NFT.address, 'TEST-PPC')
+      }, true)
       NFT.CONTRACT = nftResult.contractTxId
 
       return ctx
