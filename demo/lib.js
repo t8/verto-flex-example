@@ -4,6 +4,17 @@ const { readFile } = require('fs/promises')
 const { fromPromise } = Async
 
 module.exports = {
+  loadContext: fromPromise(
+    async function loadContext(ctx) {
+      const barText = new TextDecoder().decode(
+        await readFile('./bar.json')
+      )
+      const nftText = new TextDecoder().decode(
+        await readFile('./nft.json')
+      )
+      return { ...ctx, BAR: JSON.parse(barText), NFT: JSON.parse(nftText) }
+    }
+  ),
   readState: fromPromise(
     async function readState(ctx) {
       const { warp, BAR, NFT } = ctx
@@ -34,7 +45,7 @@ module.exports = {
       return ctx
     }
   ),
-  createOrder: fromPromise(
+  createBuyOrder: ({ qty = 10, price = 1 }) => fromPromise(
     async function createOrder(ctx) {
       const { warp, BAR, NFT, allowTx } = ctx
 
@@ -47,22 +58,62 @@ module.exports = {
           function: 'createOrder',
           transaction: allowTx,
           pair: [BAR.CONTRACT, NFT.CONTRACT],
-          qty: 10,
-          price: 1
+          qty,
+          price
         })
 
       return ctx
     }
   ),
-  allowOrder: fromPromise(
+  createSellOrder: ({ qty = 10, price = 1 }) => fromPromise(
+    async function createOrder(ctx) {
+      const { warp, BAR, NFT, allowTx } = ctx
+
+      const x = await warp.contract(NFT.CONTRACT)
+        .connect(type === 'nft' ? NFT.jwk : BAR.jwk)
+        .setEvaluationOptions({
+          internalWrites: true
+        })
+        .writeInteraction({
+          function: 'createOrder',
+          transaction: allowTx,
+          pair: [BAR.CONTRACT, NFT.CONTRACT],
+          qty,
+          price
+        })
+
+      return ctx
+    }
+  ),
+  // createOrder: ({ qty = 10, price = 1, type = 'nft' }) => fromPromise(
+  //   async function createOrder(ctx) {
+  //     const { warp, BAR, NFT, allowTx } = ctx
+
+  //     const x = await warp.contract(NFT.CONTRACT)
+  //       .connect(type === 'nft' ? NFT.jwk : BAR.jwk)
+  //       .setEvaluationOptions({
+  //         internalWrites: true
+  //       })
+  //       .writeInteraction({
+  //         function: 'createOrder',
+  //         transaction: allowTx,
+  //         pair: [BAR.CONTRACT, NFT.CONTRACT],
+  //         qty,
+  //         price
+  //       })
+
+  //     return ctx
+  //   }
+  // ),
+  allowOrder: ({ qty = 10 }) => fromPromise(
     async function allowOrder(ctx) {
       const { warp, NFT, BAR } = ctx
       const result = await warp.contract(BAR.CONTRACT)
-        .connect(NFT.jwk)
+        .connect(BAR.jwk)
         .writeInteraction({
           function: 'allow',
           target: NFT.CONTRACT,
-          qty: 10
+          qty
         })
       //console.log(result)
       return { ...ctx, allowTx: result }
