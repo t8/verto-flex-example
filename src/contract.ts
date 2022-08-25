@@ -150,6 +150,15 @@ export async function handle(
     // Claim qty
     const qty = input.qty;
 
+    // Check to make sure it hasn't been claimed already
+    for (let i = 0; i < claims.length; i++) {
+      if (claims[i] === txID) {
+        console.log('Already Claimed!')
+        return { state }
+        //throw new ContractError("This claim has already been made");
+      }
+    }
+
     if (!claimable.length) {
       throw new ContractError("Contract has no claims available");
     }

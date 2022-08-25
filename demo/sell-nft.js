@@ -12,7 +12,7 @@ of({ arweave, warp })
   .chain(loadContext)
   .chain(createPair)
   //.chain(mine)
-  .chain(createSellOrder({ qty: 100, price: Number(arweave.ar.arToWinston('0.01')) }))
+  .chain(createSellOrder({ qty: 100, price: 10000 }))
   //.chain(mine)
   .chain(readState)
   .fork(

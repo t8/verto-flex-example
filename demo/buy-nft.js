@@ -8,11 +8,15 @@ const { of, fromPromise } = Async
 const arweave = Arweave.init({ host: 'arweave.net', port: 443, protocol: 'https' })
 const warp = WarpNodeFactory.memCached(arweave)
 
+const sleep = fromPromise(() => new Promise(resolve => setTimeout(resolve, 1000)))
+
 of({ arweave, warp })
   .chain(loadContext)
 
-  .chain(allowOrder({ qty: Number(arweave.ar.arToWinston('0.01')) }))
-  .chain(createBuyOrder({ qty: Number(arweave.ar.arToWinston('0.01')) }))
+  .chain(allowOrder({ qty: 1000000 }))
+  .chain(x => sleep().map(_ => x)) // sleep 1000
+  //.chain(readState)
+  .chain(createBuyOrder({ qty: 1000000 }))
 
   .chain(readState)
   .fork(
