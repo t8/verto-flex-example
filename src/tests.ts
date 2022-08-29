@@ -1,33 +1,36 @@
-import fs from 'fs';
-import path from 'path';
-import {Contract, LoggerFactory, WarpFactory} from "warp-contracts";
+import fs from "fs";
+import path from "path";
+import { Contract, LoggerFactory, WarpFactory } from "warp-contracts";
 import ArLocal from "arlocal";
-import {JWKInterface} from "arweave/node/lib/wallet";
-import * as util from "util";
+import { JWKInterface } from "arweave/node/lib/wallet";
+import { StateInterface } from "./faces";
 
 // note: setting global logging level to 'error' to reduce logging.
-LoggerFactory.INST.logLevel('error');
+LoggerFactory.INST.logLevel("error");
+
+// the 'forLocal' version uses by default inMemory cache - so no cache files are saved between test runs
 const warp = WarpFactory.forLocal();
+
+type Wallet = {
+  address: string;
+  jwk: JWKInterface;
+};
 
 async function generateWallets() {
   // note: this automatically adds funds to the generated wallet
   const walletAJwk = await warp.testing.generateWallet();
   const walletBJwk = await warp.testing.generateWallet();
 
-  let walletA: {
-    address: string;
-    jwk: JWKInterface;
-  } = {
+  // note to myself: SDK should probably return this 'Wallet' type from 'generateWallet' function
+  // (instead of returning JWKInterface only)
+  let walletA: Wallet = {
     jwk: walletAJwk,
-    address: await warp.arweave.wallets.getAddress(walletAJwk)
-  }
-  let walletB: {
-    address: string;
-    jwk: JWKInterface;
-  } = {
+    address: await warp.arweave.wallets.getAddress(walletAJwk),
+  };
+  let walletB: Wallet = {
     jwk: walletBJwk,
-    address: await warp.arweave.wallets.getAddress(walletBJwk)
-  }
+    address: await warp.arweave.wallets.getAddress(walletBJwk),
+  };
 
   return {
     walletA,
@@ -35,9 +38,17 @@ async function generateWallets() {
   };
 }
 
-
-async function deployContracts(walletA, walletB): Promise<{ contractA: Contract<any>, contractB: Contract<any> }> {
-  const contractSrc = fs.readFileSync(path.join(__dirname, '../', 'dist/contract.js'), 'utf8');
+async function deployContracts(
+  walletA: Wallet,
+  walletB: Wallet
+): Promise<{
+  contractA: Contract<StateInterface>;
+  contractB: Contract<StateInterface>;
+}> {
+  const contractSrc = fs.readFileSync(
+    path.join(__dirname, "../", "dist/contract.js"),
+    "utf8"
+  );
 
   const initialStateA = {
     emergencyHaltWallet: walletA.address,
@@ -73,27 +84,31 @@ async function deployContracts(walletA, walletB): Promise<{ contractA: Contract<
 
   let contractATxId, contractBTxId;
 
-  ({contractTxId: contractATxId} = await warp.createContract.deploy({
+  ({ contractTxId: contractATxId } = await warp.createContract.deploy({
     wallet: walletA.jwk,
     initState: JSON.stringify(initialStateA),
-    src: contractSrc
+    src: contractSrc,
   }));
 
-  ({contractTxId: contractBTxId} = await warp.createContract.deploy({
+  ({ contractTxId: contractBTxId } = await warp.createContract.deploy({
     wallet: walletB.jwk,
     initState: JSON.stringify(initialStateB),
-    src: contractSrc
+    src: contractSrc,
   }));
 
   await warp.testing.mineBlock();
 
-  const contractA = warp.contract(contractATxId).setEvaluationOptions({
-    internalWrites: true
-  });
+  const contractA = warp
+    .contract<StateInterface>(contractATxId)
+    .setEvaluationOptions({
+      internalWrites: true,
+    });
 
-  const contractB = warp.contract(contractBTxId).setEvaluationOptions({
-    internalWrites: true
-  });
+  const contractB = warp
+    .contract<StateInterface>(contractBTxId)
+    .setEvaluationOptions({
+      internalWrites: true,
+    });
 
   return {
     contractA,
@@ -101,17 +116,17 @@ async function deployContracts(walletA, walletB): Promise<{ contractA: Contract<
   };
 }
 
-async function createPair(walletA: JWKInterface, contractA: Contract, contractB: Contract) {
-
+async function createPair(
+  walletA: JWKInterface,
+  contractA: Contract<StateInterface>,
+  contractB: Contract<StateInterface>
+) {
   // creates a pair on "ContractB" from "walletA"
   // note: "writeInteraction" in "local" env. makes automatic block mining
-  const {originalTxId} = await contractB
-    .connect(walletA)
-    .writeInteraction({
-      function: "addPair",
-      pair: contractA.txId()
-    });
-
+  const { originalTxId } = await contractB.connect(walletA).writeInteraction({
+    function: "addPair",
+    pair: contractA.txId(),
+  });
 
   /*const pairTx = await arweave.createTransaction(
     {
@@ -137,17 +152,17 @@ async function createPair(walletA: JWKInterface, contractA: Contract, contractB:
   return originalTxId;
 }
 
-async function allowOrder(walletA, contractA, contractB) {
-
+async function allowOrder(
+  walletA: JWKInterface,
+  contractA: Contract<StateInterface>,
+  contractB: Contract<StateInterface>
+) {
   // allows order on "ContractA" from "walletA" to target "ContractB"
-  const {originalTxId} = await contractA
-    .connect(walletA)
-    .writeInteraction({
-      function: "allow",
-      target: contractB.txId(),
-      qty: 10
-    });
-
+  const { originalTxId } = await contractA.connect(walletA).writeInteraction({
+    function: "allow",
+    target: contractB.txId(),
+    qty: 10,
+  });
 
   /*const allowTx = await arweave.createTransaction(
     {
@@ -174,19 +189,21 @@ async function allowOrder(walletA, contractA, contractB) {
   return originalTxId;
 }
 
-async function makeOrder(walletA, contractA, contractB, allowTx) {
+async function makeOrder(
+  walletA: JWKInterface,
+  contractA: Contract<StateInterface>,
+  contractB: Contract<StateInterface>,
+  allowTx: string
+) {
   let contract = allowTx === "" ? contractA : contractB;
 
-  const {originalTxId} = await contract
-    .connect(walletA)
-    .writeInteraction({
-      function: "createOrder",
-      transaction: allowTx,
-      pair: [contractA.txId(), contractB.txId()],
-      qty: 10,
-      price: 1,
-    });
-
+  const { originalTxId } = await contract.connect(walletA).writeInteraction({
+    function: "createOrder",
+    transaction: allowTx,
+    pair: [contractA.txId(), contractB.txId()],
+    qty: 10,
+    price: 1,
+  });
 
   /* const orderTx = await arweave.createTransaction(
      {
@@ -231,21 +248,21 @@ async function flow() {
 
   let arLocal;
   try {
+    console.log("Starting ArLocal");
     arLocal = new ArLocal(1984, false);
     await arLocal.start();
 
-
-    const {walletA, walletB} = await generateWallets();
-    console.log('Wallets', {
+    const { walletA, walletB } = await generateWallets();
+    console.log("Wallets", {
       walletA: walletA.address,
-      walletB: walletB.address
+      walletB: walletB.address,
     });
 
-    const {contractA, contractB} = await deployContracts(walletA, walletB);
-    console.log('Contracts', {
+    const { contractA, contractB } = await deployContracts(walletA, walletB);
+    console.log("Contracts", {
       contractA: contractA.txId(),
-      contractB: contractB.txId()
-    })
+      contractB: contractB.txId(),
+    });
 
     const pairTx = await createPair(walletA.jwk, contractA, contractB);
     console.log(`INITIALIZED PAIR TX: ${pairTx}`);
@@ -256,27 +273,22 @@ async function flow() {
     const allowTx = await allowOrder(walletA.jwk, contractA, contractB);
     console.log(`MADE ALLOW TX: ${allowTx}`);
 
-    const orderTx = await makeOrder(
-      walletA.jwk,
-      contractA,
-      contractB,
-      allowTx
-    );
+    const orderTx = await makeOrder(walletA.jwk, contractA, contractB, allowTx);
     console.log(`MADE ORDER TX: ${orderTx}`);
 
-    console.log("\n === Contract B state ===\n ");
+    console.log("\n === Contract B state ===\n");
     const contractBResult = await contractB.readState();
     console.dir(contractBResult.cachedValue.state, { depth: null });
 
-    console.log("\n\n === Contract A state ===\n ");
+    console.log("\n\n === Contract A state ===\n");
     const contractAResult = await contractA.readState();
     console.dir(contractAResult.cachedValue.state, { depth: null });
-
   } finally {
-    await arLocal.stop()
+    console.log("Stopping ArLocal");
+    await arLocal.stop();
   }
 }
 
 flow().finally(() => {
-  console.log('flow done');
+  console.log("flow done");
 });

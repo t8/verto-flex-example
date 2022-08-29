@@ -90,8 +90,8 @@ export async function handle(
     if (balances[caller] < quantity) {
       throw new ContractError(
         "Caller balance not high enough to make claimable " +
-        quantity +
-        " token(s)."
+          quantity +
+          " token(s)."
       );
     }
 
@@ -154,18 +154,18 @@ export async function handle(
   }
 
   if (input.function === "addPair") {
-    const _ = await AddPair(state, action)
+    const _ = await AddPair(state, action);
     return { state: _.state };
   }
 
   if (input.function === "cancelOrder") {
-    const _ = await CancelOrder(state, action)
+    const _ = await CancelOrder(state, action);
     return { state: _.state };
   }
 
   if (input.function === "createOrder") {
     const _ = await CreateOrder(state, action);
-    return { state: _.state }
+    return { state: _.state };
   }
 
   if (input.function === "halt") {
