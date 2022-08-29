@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ES6",
+    "module": "commonjs",
     "outDir": "./dist",
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "isolatedModules": false,
     "declaration": true,
     "allowSyntheticDefaultImports": true,
