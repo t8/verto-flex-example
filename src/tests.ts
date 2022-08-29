@@ -1,30 +1,36 @@
-import Arweave from "arweave";
+import fs from "fs";
+import path from "path";
+import { Contract, LoggerFactory, WarpFactory } from "warp-contracts";
+import ArLocal from "arlocal";
 import { JWKInterface } from "arweave/node/lib/wallet";
-import { readFile } from "fs/promises";
-import { join, dirname } from "path";
-import { fileURLToPath } from 'url';
-import { createContract } from "smartweave";
-import { WarpNodeFactory } from "warp-contracts";
+import { StateInterface } from "./faces";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// note: setting global logging level to 'error' to reduce logging.
+LoggerFactory.INST.logLevel("error");
 
-let arweave: Arweave;
+// the 'forLocal' version uses by default inMemory cache - so no cache files are saved between test runs
+const warp = WarpFactory.forLocal();
 
-async function generateWallets(arweave) {
-  let walletA: {
-    address: string;
-    jwk: JWKInterface;
-  } = { address: "", jwk: undefined };
-  let walletB: {
-    address: string;
-    jwk: JWKInterface;
-  } = { address: "", jwk: undefined };
+type Wallet = {
+  address: string;
+  jwk: JWKInterface;
+};
 
-  walletA.jwk = await arweave.wallets.generate();
-  walletB.jwk = await arweave.wallets.generate();
-  walletA.address = await arweave.wallets.getAddress(walletA.jwk);
-  walletB.address = await arweave.wallets.getAddress(walletB.jwk);
+async function generateWallets() {
+  // note: this automatically adds funds to the generated wallet
+  const walletAJwk = await warp.testing.generateWallet();
+  const walletBJwk = await warp.testing.generateWallet();
+
+  // note to myself: SDK should probably return this 'Wallet' type from 'generateWallet' function
+  // (instead of returning JWKInterface only)
+  let walletA: Wallet = {
+    jwk: walletAJwk,
+    address: await warp.arweave.wallets.getAddress(walletAJwk),
+  };
+  let walletB: Wallet = {
+    jwk: walletBJwk,
+    address: await warp.arweave.wallets.getAddress(walletBJwk),
+  };
 
   return {
     walletA,
@@ -32,18 +38,16 @@ async function generateWallets(arweave) {
   };
 }
 
-async function triggerFaucet(arweave, walletA, walletB) {
-  await arweave.api.get(`/mint/${walletA.address}/1000000000000`);
-  await arweave.api.get(`/mint/${walletB.address}/1000000000000`);
-}
-
-async function mine() {
-  await arweave.api.get("mine");
-}
-
-async function deployContracts(arweave, walletA, walletB) {
-  const contractSrc = new TextDecoder().decode(
-    await readFile(join(__dirname, "./contract.js"))
+async function deployContracts(
+  walletA: Wallet,
+  walletB: Wallet
+): Promise<{
+  contractA: Contract<StateInterface>;
+  contractB: Contract<StateInterface>;
+}> {
+  const contractSrc = fs.readFileSync(
+    path.join(__dirname, "../", "dist/contract.js"),
+    "utf8"
   );
 
   const initialStateA = {
@@ -78,21 +82,33 @@ async function deployContracts(arweave, walletA, walletB) {
     settings: [["isTradeable", true]],
   };
 
-  const contractA = await createContract(
-    arweave,
-    walletA.jwk,
-    contractSrc,
-    JSON.stringify(initialStateA)
-  );
+  let contractATxId, contractBTxId;
 
-  const contractB = await createContract(
-    arweave,
-    walletA.jwk,
-    contractSrc,
-    JSON.stringify(initialStateB)
-  );
+  ({ contractTxId: contractATxId } = await warp.createContract.deploy({
+    wallet: walletA.jwk,
+    initState: JSON.stringify(initialStateA),
+    src: contractSrc,
+  }));
 
-  await mine();
+  ({ contractTxId: contractBTxId } = await warp.createContract.deploy({
+    wallet: walletB.jwk,
+    initState: JSON.stringify(initialStateB),
+    src: contractSrc,
+  }));
+
+  await warp.testing.mineBlock();
+
+  const contractA = warp
+    .contract<StateInterface>(contractATxId)
+    .setEvaluationOptions({
+      internalWrites: true,
+    });
+
+  const contractB = warp
+    .contract<StateInterface>(contractBTxId)
+    .setEvaluationOptions({
+      internalWrites: true,
+    });
 
   return {
     contractA,
@@ -100,8 +116,19 @@ async function deployContracts(arweave, walletA, walletB) {
   };
 }
 
-async function createPair(arweave, walletA, contractA, contractB) {
-  const pairTx = await arweave.createTransaction(
+async function createPair(
+  walletA: JWKInterface,
+  contractA: Contract<StateInterface>,
+  contractB: Contract<StateInterface>
+) {
+  // creates a pair on "ContractB" from "walletA"
+  // note: "writeInteraction" in "local" env. makes automatic block mining
+  const { originalTxId } = await contractB.connect(walletA).writeInteraction({
+    function: "addPair",
+    pair: contractA.txId(),
+  });
+
+  /*const pairTx = await arweave.createTransaction(
     {
       data: "1234",
     },
@@ -120,13 +147,24 @@ async function createPair(arweave, walletA, contractA, contractB) {
   await arweave.transactions.sign(pairTx, walletA.jwk);
   await arweave.transactions.post(pairTx);
 
-  await mine();
+  await mine();*/
 
-  return pairTx.id;
+  return originalTxId;
 }
 
-async function allowOrder(arweave, walletA, contractA, contractB) {
-  const allowTx = await arweave.createTransaction(
+async function allowOrder(
+  walletA: JWKInterface,
+  contractA: Contract<StateInterface>,
+  contractB: Contract<StateInterface>
+) {
+  // allows order on "ContractA" from "walletA" to target "ContractB"
+  const { originalTxId } = await contractA.connect(walletA).writeInteraction({
+    function: "allow",
+    target: contractB.txId(),
+    qty: 10,
+  });
+
+  /*const allowTx = await arweave.createTransaction(
     {
       data: "1234",
     },
@@ -146,53 +184,57 @@ async function allowOrder(arweave, walletA, contractA, contractB) {
   await arweave.transactions.sign(allowTx, walletA.jwk);
   await arweave.transactions.post(allowTx);
 
-  await mine();
+  await mine();*/
 
-  return allowTx.id;
+  return originalTxId;
 }
 
-async function makeOrder(arweave, walletA, contractA, contractB, allowTx) {
-  const orderTx = await arweave.createTransaction(
-    {
-      data: "1234",
-    },
-    walletA.jwk
-  );
-  const input = {
+async function makeOrder(
+  walletA: JWKInterface,
+  contractA: Contract<StateInterface>,
+  contractB: Contract<StateInterface>,
+  allowTx: string
+) {
+  let contract = allowTx === "" ? contractA : contractB;
+
+  const { originalTxId } = await contract.connect(walletA).writeInteraction({
     function: "createOrder",
     transaction: allowTx,
-    pair: [contractA, contractB],
+    pair: [contractA.txId(), contractB.txId()],
     qty: 10,
     price: 1,
-  };
-
-  orderTx.addTag("App-Name", "SmartWeaveAction");
-  orderTx.addTag("App-Version", "0.3.0");
-  if (allowTx === "") {
-    // Order is on itself
-    orderTx.addTag("Contract", contractA);
-  } else {
-    orderTx.addTag("Contract", contractB);
-  }
-  orderTx.addTag("Input", JSON.stringify(input));
-
-  await arweave.transactions.sign(orderTx, walletA.jwk);
-  await arweave.transactions.post(orderTx);
-
-  await mine();
-
-  return orderTx.id;
-}
-
-async function readState(arweave, contract) {
-  const warp = WarpNodeFactory.memCachedBased(arweave)
-    .useArweaveGateway()
-    .build();
-  const thing = warp.contract(contract).setEvaluationOptions({
-    internalWrites: true
   });
 
-  return await thing.readState();
+  /* const orderTx = await arweave.createTransaction(
+     {
+       data: "1234",
+     },
+     walletA.jwk
+   );
+   const input = {
+     function: "createOrder",
+     transaction: allowTx,
+     pair: [contractA, contractB],
+     qty: 10,
+     price: 1,
+   };
+
+   orderTx.addTag("App-Name", "SmartWeaveAction");
+   orderTx.addTag("App-Version", "0.3.0");
+   if (allowTx === "") {
+     // Order is on itself
+     orderTx.addTag("Contract", contractA);
+   } else {
+     orderTx.addTag("Contract", contractB);
+   }
+   orderTx.addTag("Input", JSON.stringify(input));
+
+   await arweave.transactions.sign(orderTx, walletA.jwk);
+   await arweave.transactions.post(orderTx);
+
+   await mine();*/
+
+  return originalTxId;
 }
 
 async function flow() {
@@ -204,48 +246,49 @@ async function flow() {
   // Call `allow` on contractA
   // Call `createOrder` on contractB
 
-  arweave = Arweave.init({
-    host: "localhost",
-    port: 1984,
-    protocol: "http",
-    timeout: 20000,
-    logging: false,
-  });
+  let arLocal;
+  try {
+    console.log("Starting ArLocal");
+    arLocal = new ArLocal(1984, false);
+    await arLocal.start();
 
-  const { walletA, walletB } = await generateWallets(arweave);
+    const { walletA, walletB } = await generateWallets();
+    console.log("Wallets", {
+      walletA: walletA.address,
+      walletB: walletB.address,
+    });
 
-  console.log(`WALLET A: ${walletA.address} \nWALLET B: ${walletB.address}`);
-  await triggerFaucet(arweave, walletA, walletB);
-  console.log("TRIGGERED FAUCET");
-  const { contractA, contractB } = await deployContracts(
-    arweave,
-    walletA,
-    walletB
-  );
-  console.log(`CONTRACT A: ${contractA}\nCONTRACT B: ${contractB}`);
-  const pairTx = await createPair(arweave, walletA, contractA, contractB);
-  console.log(`INITIALIZED PAIR TX: ${pairTx}`);
+    const { contractA, contractB } = await deployContracts(walletA, walletB);
+    console.log("Contracts", {
+      contractA: contractA.txId(),
+      contractB: contractB.txId(),
+    });
 
-  const matchTx = await makeOrder(arweave, walletB, contractB, contractA, "");
-  console.log(`MADE MATCH TX: ${matchTx}`);
+    const pairTx = await createPair(walletA.jwk, contractA, contractB);
+    console.log(`INITIALIZED PAIR TX: ${pairTx}`);
 
-  const allowTx = await allowOrder(arweave, walletA, contractA, contractB);
-  console.log(`MADE ALLOW TX: ${allowTx}`);
-  const orderTx = await makeOrder(
-    arweave,
-    walletA,
-    contractA,
-    contractB,
-    allowTx
-  );
-  console.log(`MADE ORDER TX: ${orderTx}`);
+    const matchTx = await makeOrder(walletB.jwk, contractB, contractA, "");
+    console.log(`MADE MATCH TX: ${matchTx}`);
 
-  const res1 = await readState(arweave, contractB);
-  console.log(JSON.stringify(res1, undefined, 2));
+    const allowTx = await allowOrder(walletA.jwk, contractA, contractB);
+    console.log(`MADE ALLOW TX: ${allowTx}`);
 
-  console.log("\n\n\n\n");
-  const res2 = await readState(arweave, contractA);
-  console.log(JSON.stringify(res2, undefined, 2));
+    const orderTx = await makeOrder(walletA.jwk, contractA, contractB, allowTx);
+    console.log(`MADE ORDER TX: ${orderTx}`);
+
+    console.log("\n === Contract B state ===\n");
+    const contractBResult = await contractB.readState();
+    console.dir(contractBResult.cachedValue.state, { depth: null });
+
+    console.log("\n\n === Contract A state ===\n");
+    const contractAResult = await contractA.readState();
+    console.dir(contractAResult.cachedValue.state, { depth: null });
+  } finally {
+    console.log("Stopping ArLocal");
+    await arLocal.stop();
+  }
 }
 
-flow();
+flow().finally(() => {
+  console.log("flow done");
+});

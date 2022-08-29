@@ -23,9 +23,9 @@ build({
     });
   });
 
-build({
+/*build({
   entryPoints: ["./src/tests.ts"],
   outdir: "./dist",
   minify: false,
   bundle: false,
-}).catch(() => process.exit(1));
+}).catch(() => process.exit(1));*/
